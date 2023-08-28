@@ -322,7 +322,11 @@ local_ref<JThrowable> getJavaExceptionForCppException(std::exception_ptr ptr) {
 void translatePendingCppExceptionToJavaException() {
   try {
 #ifndef FBJNI_NO_EXCEPTION_PTR
-    auto exc = getJavaExceptionForCppException(std::current_exception());
+    auto e = std::current_exception();
+    if (!e) {
+        e = std::make_exception_ptr(std::runtime_error("can't catch current exception"));
+    }
+    auto exc = getJavaExceptionForCppException(e);
 #else
     auto exc = JUnknownCppException::create();
 #endif
