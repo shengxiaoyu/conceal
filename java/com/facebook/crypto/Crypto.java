@@ -175,4 +175,12 @@ public class Crypto {
       throws IOException, KeyChainException, CryptoInitializationException {
     return mMac.demacFrom(stream, entity);
   }
+
+  public boolean isEncrypted(InputStream stream, Entity entity) throws CryptoInitializationException{
+    return mCipher.isEncrypted(stream, entity);
+  }
+
+  public boolean isEncrypted(byte[] cipherTextBytes, Entity entity) throws CryptoInitializationException {
+    return mCipher.isEncrypted(cipherTextBytes, entity);
+  }
 }

@@ -23,6 +23,7 @@ import com.facebook.crypto.streams.TailInputStream;
 import com.facebook.crypto.util.NativeCryptoLibrary;
 
 import com.facebook.crypto.exception.CryptoInitializationException;
+import java.io.BufferedInputStream;
 
 /**
  * New implementation of Crypto that only implements Gcm not Mac.
@@ -228,5 +229,49 @@ public class Cipher {
    */
   /* package protected */ int getCipherMetaDataLength() {
     return mConfig.getHeaderLength() + mConfig.getTailLength();
+  }
+
+  /**
+   * 通过start tag是否匹配来判断是否加密过文件
+   * @param in
+   * @param entity
+   * @return
+   * @throws CryptoInitializationException
+   */
+  public boolean isEncrypted(InputStream in, Entity entity) throws CryptoInitializationException {
+      // CipherHybrid doesn't auto-load native code
+      mNativeCryptoLibrary.ensureCryptoLoaded();
+      CipherHybrid cipherHybrid = new CipherHybrid(mConfig.cipherId, mKeyChain);
+      byte[] entityBytes = entity.getBytes();
+      DecryptHybrid decryptHybrid = cipherHybrid.createDecrypt(entityBytes, 0, entityBytes.length);
+      byte[] header = new byte[mConfig.getHeaderLength()];
+      try {
+        BufferedInputStream bufferedInputStream = new BufferedInputStream(in);
+        bufferedInputStream.mark(mConfig.getHeaderLength());
+        new DataInputStream(bufferedInputStream).readFully(header);
+        decryptHybrid.start(header);
+        bufferedInputStream.reset();
+      } catch (RuntimeException | IOException e) {
+        e.printStackTrace();
+        return false;
+      }
+      return true;
+  }
+
+  public boolean isEncrypted(byte[] cipherTextBytes, Entity entity) throws CryptoInitializationException {
+    // CipherHybrid doesn't auto-load native code
+    mNativeCryptoLibrary.ensureCryptoLoaded();
+    CipherHybrid cipherHybrid = new CipherHybrid(mConfig.cipherId, mKeyChain);
+    byte[] entityBytes = entity.getBytes();
+    DecryptHybrid decryptHybrid = cipherHybrid.createDecrypt(entityBytes, 0, entityBytes.length);
+    byte[] header = new byte[mConfig.getHeaderLength()];
+    try {
+      System.arraycopy(cipherTextBytes, 0, header, 0, header.length);
+      decryptHybrid.start(header);
+    } catch (RuntimeException e) {
+      e.printStackTrace();
+      return false;
+    }
+    return true;
   }
 }
